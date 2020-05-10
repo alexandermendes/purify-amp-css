@@ -60,3 +60,18 @@ class MyDocument extends Document {
 
 export default MyDocument;
 ```
+
+## Configuration
+
+The default function accepts an options object, for example:
+
+```js
+app.use(purifyAmpCss({ minify: false }));
+```
+
+It accepts the following options:
+
+| Option      | Description                           | Default |
+|-------------|---------------------------------------|---------|
+| `minify`    | Minify the AMP CSS                    | `true`  |
+| `whitelist` | Array of selectors to always leave in | `[]`    |

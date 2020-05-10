@@ -45,7 +45,7 @@ const getBody = (html) => {
   return body ? body.toString() : '';
 };
 
-const getPurifiedData = (originalData, originalFunction, res, ...args) => {
+const getPurifiedData = (purifyCssOpts = {}, originalData, originalFunction, res, ...args) => {
   let data = res.data || '';
 
   if (typeof originalData === 'string') {
@@ -70,7 +70,7 @@ const getPurifiedData = (originalData, originalFunction, res, ...args) => {
     return;
   }
 
-  purify(body, ampCss, { minify: true }, (purifiedCss) => {
+  purify(body, ampCss, purifyCssOpts, (purifiedCss) => {
     data = setAmpCss(data, purifiedCss);
 
     // eslint-disable-next-line no-underscore-dangle
@@ -82,11 +82,24 @@ const getPurifiedData = (originalData, originalFunction, res, ...args) => {
   });
 };
 
-export default () => (req, res, next) => {
+export default ({
+  minify = true,
+  whitelist = [],
+} = {}) => (req, res, next) => {
   const { end, write } = res;
 
-  res.write = (originalData, ...args) => getPurifiedData(originalData, write, res, ...args);
-  res.end = (originalData, ...args) => getPurifiedData(originalData, end, res, ...args);
+  const purifyCssOpts = {
+    minify,
+    whitelist,
+  };
+
+  res.write = (originalData, ...args) => (
+    getPurifiedData(purifyCssOpts, originalData, write, res, ...args)
+  );
+
+  res.end = (originalData, ...args) => (
+    getPurifiedData(purifyCssOpts, originalData, end, res, ...args)
+  );
 
   if (next) {
     next();
