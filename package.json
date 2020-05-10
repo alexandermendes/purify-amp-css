@@ -1,0 +1,55 @@
+{
+  "name": "purify-amp-css",
+  "version": "0.1.0",
+  "description": "A Jest matcher to validate AMP markup",
+  "author": "Alex Mendes",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "babel src -d dist --ignore *.test.js",
+    "prebuild": "rimraf dist",
+    "lint": "eslint .",
+    "test": "jest",
+    "prepublishOnly": "yarn build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexandermendes/purify-amp-css.git"
+  },
+  "homepage": "https://github.com/alexandermendes/purify-amp-css#readme",
+  "bugs": {
+    "url": "https://github.com/alexandermendes/purify-amp-css/issues"
+  },
+  "keywords": [
+    "amp",
+    "optimize",
+    "css",
+    "remove",
+    "unused"
+  ],
+  "files": [
+    "dist"
+  ],
+  "husky": {
+    "hooks": {
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.9.6",
+    "@babel/preset-env": "^7.9.6",
+    "@commitlint/config-conventional": "^8.3.4",
+    "babel-eslint": "^10.1.0",
+    "babel-jest": "^25.5.1",
+    "commitlint": "^8.3.5",
+    "cross-env": "^7.0.2",
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb-base": "^14.1.0",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-jest": "^23.8.2",
+    "husky": "^4.2.5",
+    "jest": "^25.5.4",
+    "rimraf": "^3.0.2"
+  }
+}
