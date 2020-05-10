@@ -1,5 +1,7 @@
 # Purify AMP CSS
 
+[![npm version](https://badge.fury.io/js/purify-amp-css.svg)](https://badge.fury.io/js/purify-amp-css)
+
 AMP pages currently have a [75KB CSS limit](https://amp.dev/documentation/guides-and-tutorials/develop/style_and_layout/).
 This package aims to help you stay within that limit by monkey patching the
 [Node HTTP ServerResponse](https://nodejs.org/api/http.html) object, searching
