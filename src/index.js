@@ -1,34 +1,81 @@
-export default () => {
-  return (req, res, next) => {
-    const { end } = res;
+import { parse } from 'node-html-parser';
+import purify from 'purify-css';
 
-    res.end = (originalData, ...args) => {
-      res.data = res.data || '';
+const getAmpElement = (doc) => {
+  const head = doc.querySelector('head');
 
-      if (typeof originalData === 'string') {
-        res.data += originalData;
+  return head.childNodes.find(({ tagName, rawAttrs }) => (
+    tagName === 'style' && rawAttrs === 'amp-custom'
+  ));
+};
+
+const getAmpCss = (html) => {
+  const doc = parse(html, { style: true });
+  const el = getAmpElement(doc);
+
+  return el ? el.text : '';
+};
+
+const setAmpCss = (html, css) => {
+  const doc = parse(html, {
+    // These node-html-parser options are disabled by default as they each hurt
+    // performance slightly, but we don't want to mess with the original doc,
+    // so turn them all on
+    style: true,
+    script: true,
+    comments: true,
+    pre: true,
+  });
+
+  const el = getAmpElement(doc);
+
+  el.set_content(css);
+
+  return doc.toString();
+};
+
+const getBody = (html) => {
+  const doc = parse(html);
+  const body = doc.querySelector('body');
+
+  return body ? body.toString() : '';
+};
+
+export default () => (req, res, next) => {
+  const { end } = res;
+
+  res.end = (originalData, ...args) => {
+    let data = res.data || '';
+
+    if (typeof originalData === 'string') {
+      data += originalData;
+    }
+
+    if (originalData instanceof Buffer) {
+      data += originalData.toString();
+    }
+
+    const ampCss = getAmpCss(data);
+    const body = getBody(data);
+
+    if (!body || !ampCss) {
+      end.call(res, data, ...args);
+      return;
+    }
+
+    purify(body, ampCss, { minify: true }, (purifiedCss) => {
+      data = setAmpCss(data, purifiedCss);
+
+      // eslint-disable-next-line no-underscore-dangle
+      if (data !== undefined && !res._header) {
+        res.setHeader('content-length', Buffer.byteLength(data, ...args));
       }
 
-      if (originalData instanceof Buffer) {
-        res.data += originalData.toString();
-      }
-
-      const ampCssMatch = (/<style[\s\r\n]+amp-custom>(.*?)<\/style>/i.exec(res.data));
-      const bodyMatch = (/<body.*?>(.*?)<\/body>/i.exec(res.data));
-
-      if (!bodyMatch || !ampCssMatch) {
-        return end.call(res, res.data, ...args);
-      }
-
-      purify(bodyMatch[1], ampCssMatch[1], { minify: true }, (purifiedCss) => {
-        res.data = res.data.replace(/<style[\s\r\n]+amp-custom>.*?<\/style>/i, `<style amp-custom>${purifiedCss}</style>`);
-
-        if (res.data !== undefined && !res._header) {
-          res.setHeader('content-length', Buffer.byteLength(res.data, ...args));
-        }
-
-        end.call(res, res.data, ...args);
-      });
-    };
+      end.call(res, data, ...args);
+    });
   };
+
+  if (next) {
+    next();
+  }
 };

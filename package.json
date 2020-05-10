@@ -48,8 +48,14 @@
     "eslint-config-airbnb-base": "^14.1.0",
     "eslint-plugin-import": "^2.20.2",
     "eslint-plugin-jest": "^23.8.2",
+    "get-port": "^5.1.1",
     "husky": "^4.2.5",
     "jest": "^25.5.4",
+    "node-fetch": "^2.6.0",
     "rimraf": "^3.0.2"
+  },
+  "dependencies": {
+    "node-html-parser": "^1.2.16",
+    "purify-css": "^1.2.5"
   }
 }
