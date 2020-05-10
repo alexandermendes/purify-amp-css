@@ -71,8 +71,6 @@ const getPurifiedData = ({
 
   const ampCss = getAmpCss(data);
 
-  // console.log(Buffer.byteLength(ampCss, 'utf8'));
-
   if (!ampCss) {
     originalFunction.call(res, data, ...args);
     if (debug) console.log('Purge AMP CSS found no <style amp-custom> element');
