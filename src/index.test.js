@@ -79,12 +79,6 @@ describe('Purify AMP CSS', () => {
     expect(original.toString()).toEqual(purified.toString());
   });
 
-  it('does not throw if no body', async () => {
-    const { original, purified } = await getDocument();
-
-    expect(original.toString()).toEqual(purified.toString());
-  });
-
   it('returns the document unchanged if no AMP CSS', async () => {
     const { original, purified } = await getDocument({ body: '<div class="yes" />' });
 
