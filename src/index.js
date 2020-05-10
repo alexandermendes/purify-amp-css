@@ -57,9 +57,15 @@ const getPurifiedData = (originalData, originalFunction, res, ...args) => {
   }
 
   const ampCss = getAmpCss(data);
+
+  if (!ampCss) {
+    originalFunction.call(res, data, ...args);
+    return;
+  }
+
   const body = getBody(data);
 
-  if (!body || !ampCss) {
+  if (!body) {
     originalFunction.call(res, data, ...args);
     return;
   }
