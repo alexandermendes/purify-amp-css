@@ -3,130 +3,160 @@ import getPort from 'get-port';
 import fetch from 'node-fetch';
 import { parse } from 'node-html-parser';
 
-import purifyAmpCss from './index';
+import { purifyAmpCss } from './index';
 
-const getDocument = async ({
-  head = '',
-  body = '',
-  responseMethod = 'end',
-  options,
-} = {}) => {
-  const port = await getPort();
-
-  const doc = `
-    <!doctype html>
+const getHtml = ({ head, body } = {}) => `
+  <!doctype html>
+  <html>
     <head>
       ${head}
     </head>
-    <html>
-      <body>
-        ${body}
-      </body>
-    </html>
-  `;
+    <body>
+      ${body}
+    </body>
+  </html>
+`;
+
+const launchServer = async () => {
+  const port = await getPort();
+  let options = {};
+  let html = '';
+  let method;
 
   const server = http.createServer((req, res) => {
-    const purify = purifyAmpCss(options);
+    purifyAmpCss(req, res, options);
 
-    purify(req, res);
-
-    if (responseMethod === 'end') {
-      res.end(doc);
+    if (method === 'end') {
+      return res.end(html);
     }
 
-    if (responseMethod === 'write') {
-      res.write(doc);
-      res.end();
+    if (method === 'write') {
+      res.write(html);
+      return res.end();
     }
-  });
 
-  server.listen(port);
-
-  const res = await fetch(`http://127.0.0.1:${port}`);
-  const nodeHttpParserOpts = {
-    style: true,
-    script: true,
-    comments: true,
-    pre: true,
-  };
-
-  server.close();
+    throw new Error('Response method not set');
+  }).listen(port);
 
   return {
-    original: parse(doc, nodeHttpParserOpts),
-    purified: parse(await res.text(), nodeHttpParserOpts),
+    server,
+    port,
+    setHtml: (newHtml) => { html = newHtml; },
+    setOptions: (newOptions) => { options = newOptions; },
+    setMethod: (newMethod) => { method = newMethod; },
   };
 };
 
+const fetchAmpCss = async (port) => {
+  const res = await fetch(`http://localhost:${port}`);
+
+  return parse(await res.text(), { style: true })
+    .querySelector('head')
+    .childNodes
+    .find((node) => node.tagName === 'style')
+    .text;
+};
+
 describe('Purify AMP CSS', () => {
+  let testServer;
+
+  beforeAll(async () => {
+    testServer = await launchServer();
+  });
+
+  afterEach(() => {
+    testServer.setOptions({});
+  });
+
+  afterAll(async () => {
+    testServer.server.close();
+  });
+
   describe.each(['write', 'end'])('response.%s', (responseMethod) => {
+    beforeEach(() => {
+      testServer.setMethod(responseMethod);
+    });
+
     it('strips unused css from the response', async () => {
-      const { purified } = await getDocument({
-        responseMethod,
+      const html = getHtml({
         head: '<style amp-custom>.yes { background: green; } .no { background: red; }</style>',
         body: '<div class="yes" />',
       });
 
-      const ampCss = purified
-        .querySelector('head')
-        .childNodes
-        .find((node) => node.tagName === 'style')
-        .text;
+      testServer.setHtml(html);
 
-      expect(ampCss).toEqual('.yes{background:green}');
+      expect(await fetchAmpCss(testServer.port)).toEqual('.yes{background:green}');
     });
 
     it('does not strip anything extra from the document head', async () => {
-      const { original, purified } = await getDocument({
+      const html = getHtml({
         head: `
-          <style />
-          <meta />
-          <script />
-          <noscript />
           <base />
+          <meta />
+          <link />
+          <style></style>
+          <script></script>
+          <noscript></noscript>
         `,
       });
 
-      expect(original.toString()).toEqual(purified.toString());
+      testServer.setHtml(html);
+
+      const res = await fetch(`http://localhost:${testServer.port}`);
+      const head = parse(await res.text(), { style: true, script: true }).querySelector('head');
+
+      expect(head.querySelector('base')).not.toBeNull();
+      expect(head.querySelector('link')).not.toBeNull();
+      expect(head.querySelector('meta')).not.toBeNull();
+      expect(head.querySelector('style')).not.toBeNull();
+      expect(head.querySelector('script')).not.toBeNull();
+      expect(head.querySelector('noscript')).not.toBeNull();
+      expect(head.querySelector('somethingelse')).toBeNull();
     });
 
     it('returns the document unchanged if no AMP CSS', async () => {
-      const { original, purified } = await getDocument({ body: '<div class="yes" />' });
+      const html = getHtml();
 
-      expect(original.toString()).toEqual(purified.toString());
+      testServer.setHtml(html);
+      testServer.setMethod(responseMethod);
+
+      const res = await fetch(`http://localhost:${testServer.port}`);
+
+      expect(await res.text()).toEqual(html);
+    });
+
+    it('returns the document unchanged if no body', async () => {
+      const html = '<head><style amp-custom>.a {}</style></head>';
+
+      testServer.setHtml(html);
+      testServer.setMethod(responseMethod);
+
+      const res = await fetch(`http://localhost:${testServer.port}`);
+
+      expect(await res.text()).toEqual(html);
     });
 
     it('does not minify the AMP CSS if minification disabled', async () => {
-      const { purified } = await getDocument({
-        responseMethod,
+      const html = getHtml({
         head: '<style amp-custom>.yes { background: green; }</style>',
         body: '<div class="yes" />',
-        options: { minify: false },
       });
 
-      const ampCss = purified
-        .querySelector('head')
-        .childNodes
-        .find((node) => node.tagName === 'style')
-        .text;
+      testServer.setHtml(html);
+      testServer.setOptions({ minify: false });
 
-      expect(ampCss).toEqual('.yes {\n  background: green;\n}');
+      expect(await fetchAmpCss(testServer.port)).toEqual('.yes {\n  background: green;\n}');
     });
 
     it('does not remove whitelisted selectors', async () => {
-      const { purified } = await getDocument({
-        responseMethod,
+      const html = getHtml({
         head: '<style amp-custom>.no { background: red; }</style>',
-        options: { whitelist: ['.no'] },
       });
 
-      const ampCss = purified
-        .querySelector('head')
-        .childNodes
-        .find((node) => node.tagName === 'style')
-        .text;
+      testServer.setHtml(html);
+      testServer.setOptions({ whitelist: ['.no'] });
 
-      expect(ampCss).toEqual('.no{background:red}');
+      expect(await fetchAmpCss(testServer.port)).toEqual('.no{background:red}');
     });
 
     describe('debug mode', () => {
@@ -141,20 +171,25 @@ describe('Purify AMP CSS', () => {
       });
 
       it('reports how many bytes were removed', async () => {
-        await getDocument({
-          responseMethod,
+        const html = getHtml({
           head: '<style amp-custom>.a {}</style>',
-          options: { debug: true },
         });
+
+        testServer.setHtml(html);
+        testServer.setOptions({ debug: true });
+
+        await fetch(`http://localhost:${testServer.port}`);
 
         expect(console.log).toHaveBeenCalledWith('Purge AMP CSS removed 5 bytes of unused CSS (100.00%)');
       });
 
       it('report if no AMP CSS found', async () => {
-        await getDocument({
-          responseMethod,
-          options: { debug: true },
-        });
+        const html = getHtml();
+
+        testServer.setHtml(html);
+        testServer.setOptions({ debug: true });
+
+        await fetch(`http://localhost:${testServer.port}`);
 
         expect(console.log).toHaveBeenCalledWith('Purge AMP CSS found no <style amp-custom> element');
       });

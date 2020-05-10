@@ -1,5 +1,5 @@
 import { parse } from 'node-html-parser';
-import purify from 'purify-css';
+import purifyCss from 'purify-css';
 
 const getAmpElement = (doc) => {
   const head = doc.querySelector('head');
@@ -84,7 +84,7 @@ const getPurifiedData = ({
     return;
   }
 
-  const purifiedCss = purify(body, ampCss, { minify, whitelist });
+  const purifiedCss = purifyCss(body, ampCss, { minify, whitelist });
 
   if (debug) {
     report(ampCss, purifiedCss);
@@ -100,7 +100,10 @@ const getPurifiedData = ({
   originalFunction.call(res, data, ...args);
 };
 
-export default (opts) => (req, res, next) => {
+/**
+ * Amp purifier.
+ */
+export const purifyAmpCss = (req, res, opts) => {
   const { end, write } = res;
 
   res.write = (originalData, ...args) => (
@@ -110,8 +113,17 @@ export default (opts) => (req, res, next) => {
   res.end = (originalData, ...args) => (
     getPurifiedData(opts, originalData, end, res, ...args)
   );
+};
+
+/**
+ * Express middleware.
+ */
+export const middleware = (opts) => (req, res, next) => {
+  purifyAmpCss(req, res, opts);
 
   if (next) {
     next();
   }
 };
+
+export default middleware;

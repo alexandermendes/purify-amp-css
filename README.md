@@ -21,34 +21,34 @@ yarn add purify-amp-css -D
 
 ## Usage
 
-Here is an example using [Express](https://expressjs.com/):
-
+Here's an example using Node's HTTP server:
 
 ```js
-import express from 'express';
-import purifyAmpCss from 'purify-amp-css';
+import http from 'http';
+import { purifyAmpCss } from 'purify-amp-css';
+import myAmpMarkup from './some/markup';
 
-const app = express()
+http.createServer((req, res) => {
+  const opts = { info: true };
 
-app.use(purifyAmpCss());
+  purifyAmpCss(req, res, opts);
 
-// ...
+  res.end(myAmpMarkup);
+}).listen(8080);
 ```
 
-As this package does not depend on Express you can also call the function
-directly with Node's HTTP Request and Response objects.
-
-Here's another example using [Next.js](https://nextjs.org/):
+Here's an example using [Next.js](https://nextjs.org/):
 
 ```js
 import Document, { Html, Head, Main, NextScript } from 'next/document';
+import { purifyAmpCss } from 'purify-amp-css';
 
 class MyDocument extends Document {
   static async getInitialProps(ctx) {
     const initialProps = await Document.getInitialProps(ctx);
-    const purify = purifyAmpCss();
+    const opts = { info: true };
 
-    purify(ctx.req, ctx.res);
+    purifyAmpCss(ctx.req, ctx.res, opts);
 
     return { ...initialProps };
   }
@@ -69,15 +69,21 @@ class MyDocument extends Document {
 export default MyDocument;
 ```
 
-## Configuration
-
-The default function accepts an options object, for example:
+Here's an example using [Express](https://expressjs.com/):
 
 ```js
-app.use(purifyAmpCss({ minify: false }));
+import express from 'express';
+import purifyAmpCss from 'purify-amp-css';
+
+const app = express()
+const opts = { info: true };
+
+app.use(purifyAmpCss.middleware(opts));
 ```
 
-It accepts the following options:
+## Configuration
+
+The options object shown in the examples above accepts the following:
 
 | Option      | Description                            | Default |
 |-------------|----------------------------------------|---------|
