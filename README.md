@@ -73,7 +73,8 @@ app.use(purifyAmpCss({ minify: false }));
 
 It accepts the following options:
 
-| Option      | Description                           | Default |
-|-------------|---------------------------------------|---------|
-| `minify`    | Minify the AMP CSS                    | `true`  |
-| `whitelist` | Array of selectors to always leave in | `[]`    |
+| Option      | Description                            | Default |
+|-------------|----------------------------------------|---------|
+| `minify`    | Minify the AMP CSS                     | `true`  |
+| `whitelist` | Array of selectors to always leave in  | `[]`    |
+| `debug`     | Log the amount of CSS that was removed | `false` |
