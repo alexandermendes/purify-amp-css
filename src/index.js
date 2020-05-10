@@ -4,6 +4,10 @@ import purify from 'purify-css';
 const getAmpElement = (doc) => {
   const head = doc.querySelector('head');
 
+  if (!head) {
+    return null;
+  }
+
   return head.childNodes.find(({ tagName, rawAttrs }) => (
     tagName === 'style' && rawAttrs === 'amp-custom'
   ));
@@ -41,39 +45,42 @@ const getBody = (html) => {
   return body ? body.toString() : '';
 };
 
+const getPurifiedData = (originalData, originalFunction, res, ...args) => {
+  let data = res.data || '';
+
+  if (typeof originalData === 'string') {
+    data += originalData;
+  }
+
+  if (originalData instanceof Buffer) {
+    data += originalData.toString();
+  }
+
+  const ampCss = getAmpCss(data);
+  const body = getBody(data);
+
+  if (!body || !ampCss) {
+    originalFunction.call(res, data, ...args);
+    return;
+  }
+
+  purify(body, ampCss, { minify: true }, (purifiedCss) => {
+    data = setAmpCss(data, purifiedCss);
+
+    // eslint-disable-next-line no-underscore-dangle
+    if (data !== undefined && !res._header) {
+      res.setHeader('content-length', Buffer.byteLength(data, ...args));
+    }
+
+    originalFunction.call(res, data, ...args);
+  });
+};
+
 export default () => (req, res, next) => {
-  const { end } = res;
+  const { end, write } = res;
 
-  res.end = (originalData, ...args) => {
-    let data = res.data || '';
-
-    if (typeof originalData === 'string') {
-      data += originalData;
-    }
-
-    if (originalData instanceof Buffer) {
-      data += originalData.toString();
-    }
-
-    const ampCss = getAmpCss(data);
-    const body = getBody(data);
-
-    if (!body || !ampCss) {
-      end.call(res, data, ...args);
-      return;
-    }
-
-    purify(body, ampCss, { minify: true }, (purifiedCss) => {
-      data = setAmpCss(data, purifiedCss);
-
-      // eslint-disable-next-line no-underscore-dangle
-      if (data !== undefined && !res._header) {
-        res.setHeader('content-length', Buffer.byteLength(data, ...args));
-      }
-
-      end.call(res, data, ...args);
-    });
-  };
+  res.write = (originalData, ...args) => getPurifiedData(originalData, write, res, ...args);
+  res.end = (originalData, ...args) => getPurifiedData(originalData, end, res, ...args);
 
   if (next) {
     next();

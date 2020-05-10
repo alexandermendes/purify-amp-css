@@ -8,6 +8,7 @@ import purifyAmpCss from './index';
 const getDocument = async ({
   head = '',
   body = '',
+  responseMethod = 'end',
 } = {}) => {
   const port = await getPort();
 
@@ -28,7 +29,14 @@ const getDocument = async ({
 
     purify(req, res);
 
-    res.end(doc);
+    if (responseMethod === 'end') {
+      res.end(doc);
+    }
+
+    if (responseMethod === 'write') {
+      res.write(doc);
+      res.end();
+    }
   });
 
   server.listen(port);
@@ -50,20 +58,22 @@ const getDocument = async ({
 };
 
 describe('Purify AMP CSS', () => {
-  it('strips unused css from the response', async () => {
-    const { purified } = await getDocument({
-      head: '<style amp-custom>.yes { background: green; } .no { background: red; }</style>',
-      body: '<div class="yes" />',
+  it.each(['write', 'end'])('strips unused css from the response when response.%s is called',
+    async (responseMethod) => {
+      const { purified } = await getDocument({
+        head: '<style amp-custom>.yes { background: green; } .no { background: red; }</style>',
+        body: '<div class="yes" />',
+        responseMethod,
+      });
+
+      const ampCss = purified
+        .querySelector('head')
+        .childNodes
+        .find((node) => node.tagName === 'style')
+        .text;
+
+      expect(ampCss).toEqual('.yes{background:green}');
     });
-
-    const ampCss = purified
-      .querySelector('head')
-      .childNodes
-      .find((node) => node.tagName === 'style')
-      .text;
-
-    expect(ampCss).toEqual('.yes{background:green}');
-  });
 
   it('does not strip anything extra from the document head', async () => {
     const { original, purified } = await getDocument({
