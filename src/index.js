@@ -45,7 +45,20 @@ const getBody = (html) => {
   return body ? body.toString() : '';
 };
 
-const getPurifiedData = (purifyCssOpts = {}, originalData, originalFunction, res, ...args) => {
+const report = (original, purified) => {
+  const originalBytes = Buffer.byteLength(original, 'utf8');
+  const purifiedBytes = Buffer.byteLength(purified, 'utf8');
+  const diff = originalBytes - purifiedBytes;
+  const percentage = ((diff / originalBytes) * 100).toFixed(2);
+
+  console.log(`Purge AMP CSS removed ${diff} bytes of unused CSS (${percentage}%)`);
+};
+
+const getPurifiedData = ({
+  minify = true,
+  whitelist = [],
+  debug = false,
+} = {}, originalData, originalFunction, res, ...args) => {
   let data = res.data || '';
 
   if (typeof originalData === 'string') {
@@ -58,8 +71,11 @@ const getPurifiedData = (purifyCssOpts = {}, originalData, originalFunction, res
 
   const ampCss = getAmpCss(data);
 
+  // console.log(Buffer.byteLength(ampCss, 'utf8'));
+
   if (!ampCss) {
     originalFunction.call(res, data, ...args);
+    if (debug) console.log('Purge AMP CSS found no <style amp-custom> element');
     return;
   }
 
@@ -70,35 +86,31 @@ const getPurifiedData = (purifyCssOpts = {}, originalData, originalFunction, res
     return;
   }
 
-  purify(body, ampCss, purifyCssOpts, (purifiedCss) => {
-    data = setAmpCss(data, purifiedCss);
+  const purifiedCss = purify(body, ampCss, { minify, whitelist });
 
-    // eslint-disable-next-line no-underscore-dangle
-    if (data !== undefined && !res._header) {
-      res.setHeader('content-length', Buffer.byteLength(data, ...args));
-    }
+  if (debug) {
+    report(ampCss, purifiedCss);
+  }
 
-    originalFunction.call(res, data, ...args);
-  });
+  data = setAmpCss(data, purifiedCss);
+
+  // eslint-disable-next-line no-underscore-dangle
+  if (data !== undefined && !res._header) {
+    res.setHeader('content-length', Buffer.byteLength(data, ...args));
+  }
+
+  originalFunction.call(res, data, ...args);
 };
 
-export default ({
-  minify = true,
-  whitelist = [],
-} = {}) => (req, res, next) => {
+export default (opts) => (req, res, next) => {
   const { end, write } = res;
 
-  const purifyCssOpts = {
-    minify,
-    whitelist,
-  };
-
   res.write = (originalData, ...args) => (
-    getPurifiedData(purifyCssOpts, originalData, write, res, ...args)
+    getPurifiedData(opts, originalData, write, res, ...args)
   );
 
   res.end = (originalData, ...args) => (
-    getPurifiedData(purifyCssOpts, originalData, end, res, ...args)
+    getPurifiedData(opts, originalData, end, res, ...args)
   );
 
   if (next) {

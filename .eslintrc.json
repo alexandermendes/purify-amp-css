@@ -13,5 +13,8 @@
     "eslint-plugin-import",
     "import",
     "jest"
-  ]
+  ],
+  "rules": {
+    "no-console": "off"
+  }
 }

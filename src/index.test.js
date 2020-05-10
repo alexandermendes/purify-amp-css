@@ -60,7 +60,7 @@ const getDocument = async ({
 
 describe('Purify AMP CSS', () => {
   describe.each(['write', 'end'])('response.%s', (responseMethod) => {
-    it.each('strips unused css from the response', async () => {
+    it('strips unused css from the response', async () => {
       const { purified } = await getDocument({
         responseMethod,
         head: '<style amp-custom>.yes { background: green; } .no { background: red; }</style>',
@@ -127,6 +127,37 @@ describe('Purify AMP CSS', () => {
         .text;
 
       expect(ampCss).toEqual('.no{background:red}');
+    });
+
+    describe('debug mode', () => {
+      const originalConsoleLog = console.log;
+
+      beforeAll(() => {
+        console.log = jest.fn();
+      });
+
+      afterAll(() => {
+        console.log = originalConsoleLog;
+      });
+
+      it('reports how many bytes were removed', async () => {
+        await getDocument({
+          responseMethod,
+          head: '<style amp-custom>.a {}</style>',
+          options: { debug: true },
+        });
+
+        expect(console.log).toHaveBeenCalledWith('Purge AMP CSS removed 5 bytes of unused CSS (100.00%)');
+      });
+
+      it('report if no AMP CSS found', async () => {
+        await getDocument({
+          responseMethod,
+          options: { debug: true },
+        });
+
+        expect(console.log).toHaveBeenCalledWith('Purge AMP CSS found no <style amp-custom> element');
+      });
     });
   });
 });
