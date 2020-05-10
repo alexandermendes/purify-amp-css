@@ -5,8 +5,10 @@
 AMP pages currently have a [75KB CSS limit](https://amp.dev/documentation/guides-and-tutorials/develop/style_and_layout/).
 
 This package aims to help you stay within that limit by monkey patching the
-[Node HTTP ServerResponse](https://nodejs.org/api/http.html) object, searching
-for any inline AMP styles, and replacing with a purified and minified version.
+[Node HTTP ServerResponse](https://nodejs.org/api/http.html) so that when markup
+is returned from the server the contents of the `<style amp-custom>` element
+can be run through [PurifyCSS](https://github.com/purifycss/purifycss), removing any unused styles
+and replacing with a purified and minified version.
 
 As AMP pages are served from the AMP cache any performance hit taken when
 initially rendering the page shouldn't matter in production.
