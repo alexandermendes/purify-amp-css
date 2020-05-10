@@ -21,6 +21,17 @@ yarn add purify-amp-css -D
 
 ## Usage
 
+Here's an example using [Express](https://expressjs.com/):
+
+```js
+import express from 'express';
+import purifyAmpCss from 'purify-amp-css';
+
+const app = express()
+
+app.use(purifyAmpCss.middleware());
+```
+
 Here's an example using Node's HTTP server:
 
 ```js
@@ -29,9 +40,7 @@ import { purifyAmpCss } from 'purify-amp-css';
 import myAmpMarkup from './some/markup';
 
 http.createServer((req, res) => {
-  const opts = { info: true };
-
-  purifyAmpCss(req, res, opts);
+  purifyAmpCss(req, res);
 
   res.end(myAmpMarkup);
 }).listen(8080);
@@ -46,9 +55,8 @@ import { purifyAmpCss } from 'purify-amp-css';
 class MyDocument extends Document {
   static async getInitialProps(ctx) {
     const initialProps = await Document.getInitialProps(ctx);
-    const opts = { info: true };
 
-    purifyAmpCss(ctx.req, ctx.res, opts);
+    purifyAmpCss(ctx.req, ctx.res);
 
     return { ...initialProps };
   }
@@ -69,21 +77,29 @@ class MyDocument extends Document {
 export default MyDocument;
 ```
 
-Here's an example using [Express](https://expressjs.com/):
-
-```js
-import express from 'express';
-import purifyAmpCss from 'purify-amp-css';
-
-const app = express()
-const opts = { info: true };
-
-app.use(purifyAmpCss.middleware(opts));
-```
-
 ## Configuration
 
-The options object shown in the examples above accepts the following:
+An options object can be passed to the named export like so:
+
+```js
+import { purifyAmpCss } from 'purify-amp-css';
+
+const options = { minify: true };
+
+purifyAmpCss(req, res, options);
+```
+
+Or when using the Express middleware:
+
+```js
+import purifyAmpCss from 'purify-amp-css';
+
+const options = { minify: true };
+
+app.use(purifyAmpCss.middleware(options));
+```
+
+The following options are available:
 
 | Option      | Description                            | Default |
 |-------------|----------------------------------------|---------|
