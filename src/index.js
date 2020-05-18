@@ -51,7 +51,7 @@ const report = (original, purified) => {
   const diff = originalBytes - purifiedBytes;
   const percentage = ((diff / originalBytes) * 100).toFixed(2);
 
-  console.log(`Purge AMP CSS removed ${diff} bytes of unused CSS (${percentage}%)`);
+  console.log(`Purify AMP CSS removed ${diff} bytes of unused CSS (${percentage}%)`);
 };
 
 const getPurifiedData = ({
@@ -73,7 +73,7 @@ const getPurifiedData = ({
 
   if (!ampCss) {
     originalFunction.call(res, data, ...args);
-    if (debug) console.log('Purge AMP CSS found no <style amp-custom> element');
+    if (debug) console.log('Purify AMP CSS found no <style amp-custom> element');
     return;
   }
 

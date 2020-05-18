@@ -180,7 +180,7 @@ describe('Purify AMP CSS', () => {
 
         await fetch(`http://localhost:${testServer.port}`);
 
-        expect(console.log).toHaveBeenCalledWith('Purge AMP CSS removed 5 bytes of unused CSS (100.00%)');
+        expect(console.log).toHaveBeenCalledWith('Purify AMP CSS removed 5 bytes of unused CSS (100.00%)');
       });
 
       it('report if no AMP CSS found', async () => {
@@ -191,7 +191,7 @@ describe('Purify AMP CSS', () => {
 
         await fetch(`http://localhost:${testServer.port}`);
 
-        expect(console.log).toHaveBeenCalledWith('Purge AMP CSS found no <style amp-custom> element');
+        expect(console.log).toHaveBeenCalledWith('Purify AMP CSS found no <style amp-custom> element');
       });
     });
   });
